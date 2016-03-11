@@ -13,6 +13,14 @@
 
 (defvar ghc-ghc-options nil "*GHC options")
 
+(defcustom ghc-process-wrapper-function
+  #'identity
+  "Wrap or transform ghc process commands using this function"
+  :group 'ghc-mod
+  :type '(choice
+          (function-item :tag "None" :value identity)
+          (function :tag "Custom function")))
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (defun ghc-replace-character (string from to)
@@ -235,13 +243,14 @@
      ,@body))
 
 (defun ghc-call-process (cmd x y z &rest args)
-  (apply 'call-process cmd x y z args)
-  (when ghc-debug
-    (let ((cbuf (current-buffer)))
-      (ghc-with-debug-buffer
-       (insert (format "%% %s %s\n" cmd (mapconcat 'identity args " ")))
-       (insert-buffer-substring cbuf)))))
-
+  (let ((pcmd (funcall ghc-process-wrapper-function (cons cmd args))))
+    (apply 'call-process (car pcmd) x y z (cdr pcmd))
+    (when ghc-debug
+      (let ((cbuf (current-buffer)))
+        (ghc-with-debug-buffer
+         (insert (format "%% %s %s\n" cmd (mapconcat 'identity args " ")))
+         (insert-buffer-substring cbuf))))))
+  
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (defun ghc-enclose (expr)
